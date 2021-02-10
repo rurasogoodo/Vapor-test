@@ -1,35 +1,36 @@
-# ================================
 # Build image
-# ================================
+FROM swift:5.3-focal as build
 
-FROM swift:5.3 as build
+RUN apt-get update -y \
+    && apt-get install -y libsqlite3-dev
+
 WORKDIR /build
 
-# Copy entire repo into container
 COPY . .
 
-# Compile with optimizations
+RUN for f in Sources/App/Modules/*; do \
+    m=$(basename $f); \
+    cp -r "${f}/Views/" "Resources/Views/${m}" 2>/dev/null; \
+    done; \
+    exit 0;
+
 RUN swift build \
     --enable-test-discovery \
     -c release \
     -Xswiftc -g
 
 
-# ================================
 # Run image
-# ================================
+FROM swift:5.3-focal-slim
 
-FROM vapor/ubuntu:18.04
-WORKDIR /run
+RUN useradd --user-group --create-home --home-dir /app vapor
 
-# Copy build artifacts
-COPY --from=build /build/.build/release /run
+WORKDIR /app
 
-# Copy Swift runtime libraries
-COPY --from=build /usr/lib/swift/ /usr/lib/swift/
+COPY --from=build --chown=vapor:vapor /build/.build/release /app
+COPY --from=build --chown=vapor:vapor /build/Public /app/Public
+COPY --from=build --chown=vapor:vapor /build/Resources /app/Resources
 
-# Uncomment the next line if you need to load resources from the `Public` directory
-#COPY --from=build /build/Public /run/Public
-
+USER vapor
 ENTRYPOINT ["./Run"]
-CMD ["serve", "--env", "production", "--hostname", "0.0.0.0:8080"]
+CMD ["serve", "--env", "production", "--hostname", "0.0.0.0", "--port", "8080"]
