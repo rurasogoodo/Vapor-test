@@ -2,7 +2,7 @@
 # Build image
 # ================================
 
-FROM vapor/swift:5.2 as build
+FROM swift:5.3 as build
 WORKDIR /build
 
 # Copy entire repo into container
@@ -32,4 +32,4 @@ COPY --from=build /usr/lib/swift/ /usr/lib/swift/
 #COPY --from=build /build/Public /run/Public
 
 ENTRYPOINT ["./Run"]
-CMD ["serve", "--env", "production", "--hostname", "0.0.0.0"]
+CMD ["serve", "--env", "production", "--hostname", "0.0.0.0:8080"]
